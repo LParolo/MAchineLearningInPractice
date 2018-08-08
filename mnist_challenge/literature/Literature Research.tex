@@ -1,0 +1,93 @@
+\documentclass[a4paper, 11pt]{article}
+\usepackage{enumitem}
+\usepackage{url}
+\usepackage{hyperref}
+\usepackage{xcolor}
+
+\begin{document}
+\section{Regularization of Neural Networks using DropConnect}
+This paper from 2013 describes the current lowest error rate performance on the MNIST data set ($0.21\%$).
+
+DropConnect is the generalization of Dropout in which each connection, rather than each output unit, can be dropped with probability $1-p$.
+It randomly drops weights rather than activations.
+This typically converges slower than Dropout, but improves results in the end.
+
+Paper found \href{https://cs.nyu.edu/~wanli/dropc/dropc.pdf}{\color{blue}here}.
+
+Explanation and code found \href{https://cs.nyu.edu/~wanli/dropc/}{\color{blue}here}.
+
+Their best results on the MNIST dataset is achieved by first creating more data with the following steps:
+\begin{enumerate}[topsep=6pt,itemsep=3pt]
+	\item Scale pixel values to [0, 1] range.
+	\item Take cropped $24\times24$ image patches from the original $28\times28$ images at random.
+	\item Flip images horizontally.
+	\item Create rotated and scaled versions of these cropped images (15\% scaling and rotation variations).
+\end{enumerate}
+They used an initial learning rate of 0.01 with a 700-200-100 epoch schedule, no momentum and preprocess by subtracting the image mean.
+They manually decreased the learning rate if the network stopped improving according to a schedule determined on the a validation set described in \href{https://www.cs.toronto.edu/~kriz/learning-features-2009-TR.pdf}{\color{blue}this paper}.
+\href{https://machinelearningmastery.com/using-learning-rate-schedules-deep-learning-models-python-keras/}{\color{blue}Here}'s an MLM guide on learning rate schedules in Keras.
+
+All experiments use mini-batch SGD on batches of 128 images.
+Five independent networks with random permutations of the training sequence are then trained on the images:
+\begin{enumerate}[topsep=6pt,itemsep=3pt]
+	\item Convolutional layer with 32 feature maps, ReLU activation.
+	\item Convolutional layer with 64 feature maps, ReLU activation.
+	\item Fully connected layer with 150 neurons, ReLU activation, $0.5$ DropConnect rate.
+	\item Fully connected layer with 10 neurons, softmax activation.
+\end{enumerate}
+The precise network is not described in detail, this summary was the best I could make of it.
+They do not mention max-pooling, which is often used after convolutional layers.
+They mention elastic distortions, but do not use them.
+Elastic distortions of images create more data, and reportedly improve performance on some neural networks.
+Dropout layers are typically used after fully connected layers, but I've read somewhere that using them after convolutional layers might improve performance.
+
+\newpage
+\section{Fractional Max-Pooling}
+This paper from 2015 describes the current 8th lowest error rate performance on the MNIST data set (0.32\%).
+
+The most popular pooling technique is with $2\times2$ filter with stride = 2, which has no overlap.
+In some networks results have been improved with overlapping pooling, such as $3\times3$ with stride = 2.
+In general, pooling layers have been overlooked: not much research has been done.
+
+Fractional max-pooling (FMP) introduces a degree of randomness to the pooling process.
+The pooling regions are chosen (pseudo-)randomly, and the re-scaling factor can be a fraction.\\
+
+\noindent The paper is very short, and it is hard to pinpoint how exactly they implemented the pooling layer.
+I think it is interesting nonetheless, because they do have good results, especially on the CIFAR-10 data set.
+
+Paper found \href{https://arxiv.org/pdf/1412.6071.pdf}{\color{blue}here}.\\
+
+\noindent To summarize, this is what they found:
+\begin{enumerate}[topsep=6pt,itemsep=3pt]
+	\item Overlapping pooling regions seem to perform better in general.
+	\item Dividing the original image into rectangular pooling regions using pseudo-randomness seems to perform better when data-augmentation is used.
+	\item Dividing the original image into rectangular pooling regions using randomness seems to work better when no data-augmentation is used.
+	\item Random pooling shows elastic distortion, pseudorandom does not.
+	\item Max-pooling seems to work better than average pooling.
+	\item The result image is not twice as small as with a $2\times2$ filter and stride = 2, but a fractional factor, or $\sqrt{2}$ times as small.
+\end{enumerate}
+Not sure how hard this is to implement.
+If we do not manage to do this, then we should at least take a look at overlapping max-pooling ($3\times3$, stride = 2), because it looks promising.
+
+\newpage
+\section{Other improvements}
+Some general improvements to CNN's from the ISMI course:
+\begin{enumerate}[topsep=6pt,itemsep=3pt]
+	\item Trying different activation functions than ReLU such as PReLU, LeakyReLU, etc.
+	\item Use valid convolutions (no padding).
+	\item Initialize the kernel with Glorot or He to speed up learning.
+	\item Try L1 or L2 regularization.
+	This might not work too well combined with Dropout/DropConnect because both go against overfitting: we might end up underfitting.
+	\item Add a batch normalization layer before or after the activation function of a dense/convolutional layer, see what works better.
+	(I've read that adding it after the activation function works better in practice)
+	\item If we use SGD as an optimizer we should play around with the (Nesterov) momentum parameter.
+	However, I expect we are going to use ADAM.
+	\item There have been some great results with fully convolutional networks (without dense layers) on the CIFAR10 data set.
+	I'm not sure if it's any good for MNIST because small CNN's seems to give great results, but it might be worth trying.
+	\item Some networks (such as AlexNet) augment images even when testing, resulting in a small improvement.
+	For example: take 5 patches from the original image, and mirror them left-to-right.
+	This creates 10 images from the original image.
+	We can let the network score each image individually and aggregate the scores to classify the original image.
+\end{enumerate}
+
+\end{document}
